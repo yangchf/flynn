@@ -186,21 +186,53 @@ func (c *Cluster) RemoveHost(id string) error {
 		return err
 	}
 	c.log("removing host", id)
-
-	var cmd string
-	switch c.bc.Backend {
-	case "libvirt-lxc":
-		cmd = "sudo start-stop-daemon --stop --pidfile /var/run/flynn-host.pid --retry 15"
-	}
-	return inst.Run(cmd, nil)
+	return c.stopHostProcess(inst)
 }
 
 func (c *Cluster) Size() int {
 	return len(c.Instances)
 }
 
+func (c *Cluster) startHostProcess(inst *Instance) error {
+	tmpl, ok := flynnHostStartScripts[c.bc.Backend]
+	if !ok {
+		return fmt.Errorf("unknown host backend: %s", c.bc.Backend)
+	}
+
+	peers := make([]string, 0, len(c.Instances))
+	for _, inst := range c.Instances {
+		if !inst.initial {
+			continue
+		}
+		peers = append(peers, fmt.Sprintf("%s=http://%s:2380", inst.ID, inst.IP))
+	}
+
+	var script bytes.Buffer
+	data := hostStartScriptData{
+		ID:        inst.ID,
+		IP:        inst.IP,
+		Peers:     strings.Join(peers, ","),
+		EtcdProxy: !inst.initial,
+	}
+	tmpl.Execute(&script, data)
+
+	c.logf("Starting flynn-host on %s [id: %s]\n", inst.IP, inst.ID)
+	if err := inst.Run("bash", &Streams{Stdin: &script, Stdout: c.out, Stderr: os.Stderr}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Cluster) stopHostProcess(inst *Instance) error {
+	cmd, ok := flynnHostStopScripts[c.bc.Backend]
+	if !ok {
+		return fmt.Errorf("unknown host backend: %s", c.bc.Backend)
+	}
+	return inst.Run(cmd, nil)
+}
+
 func (c *Cluster) startVMs(rootFS string, initial bool, count int) ([]*Instance, error) {
-	tmpl, ok := flynnHostScripts[c.bc.Backend]
+	_, ok := flynnHostStartScripts[c.bc.Backend]
 	if !ok {
 		return nil, fmt.Errorf("unknown host backend: %s", c.bc.Backend)
 	}
@@ -232,25 +264,8 @@ func (c *Cluster) startVMs(rootFS string, initial bool, count int) ([]*Instance,
 		instances[i] = inst
 		c.Instances = append(c.Instances, inst)
 	}
-	peers := make([]string, 0, len(c.Instances))
-	for _, inst := range c.Instances {
-		if !inst.initial {
-			continue
-		}
-		peers = append(peers, fmt.Sprintf("%s=http://%s:2380", inst.ID, inst.IP))
-	}
 	for _, inst := range instances {
-		var script bytes.Buffer
-		data := hostScriptData{
-			ID:        inst.ID,
-			IP:        inst.IP,
-			Peers:     strings.Join(peers, ","),
-			EtcdProxy: !initial,
-		}
-		tmpl.Execute(&script, data)
-
-		c.logf("Starting flynn-host on %s [id: %s]\n", inst.IP, inst.ID)
-		if err := inst.Run("bash", &Streams{Stdin: &script, Stdout: c.out, Stderr: os.Stderr}); err != nil {
+		if err := c.startHostProcess(inst); err != nil {
 			return nil, err
 		}
 	}
@@ -380,14 +395,14 @@ func runUnitTests(inst *Instance, out io.Writer) error {
 	return inst.Run("bash", &Streams{Stdin: bytes.NewBufferString(flynnUnitTestScript), Stdout: out, Stderr: out})
 }
 
-type hostScriptData struct {
+type hostStartScriptData struct {
 	ID        string
 	IP        string
 	Peers     string
 	EtcdProxy bool
 }
 
-var flynnHostScripts = map[string]*template.Template{
+var flynnHostStartScripts = map[string]*template.Template{
 	"libvirt-lxc": template.Must(template.New("flynn-host-libvirt").Parse(`
 if [[ -f /usr/local/bin/debug-info.sh ]]; then
   /usr/local/bin/debug-info.sh &>/tmp/debug-info.log &
@@ -414,6 +429,10 @@ sudo start-stop-daemon \
   --backend libvirt-lxc \
   &>/tmp/flynn-host.log
 `[1:])),
+}
+
+var flynnHostStopScripts = map[string]string{
+	"libvirt-lxc": "sudo start-stop-daemon --stop --pidfile /var/run/flynn-host.pid --retry 15",
 }
 
 type bootstrapMsg struct {
