@@ -32,7 +32,7 @@ func (s *BounceSuite) TestHostUpDown(t *c.C) {
 	hosts, err := cl.AddHosts(testCluster, s.clusterClient(t), 1)
 	t.Assert(err, c.IsNil)
 	t.Assert(hosts, c.HasLen, 1)
-	err = cl.RemoveHosts(s.discoverdClient(t), hosts)
+	err = cl.RemoveHosts(hosts)
 	t.Assert(err, c.IsNil)
 }
 

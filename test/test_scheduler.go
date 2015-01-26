@@ -44,7 +44,7 @@ func (s *SchedulerSuite) removeHosts(t *c.C, ids []string) {
 		C:          httpClient,
 		ClusterAPI: args.ClusterAPI,
 	}
-	err := cl.RemoveHosts(s.discoverdClient(t), ids)
+	err := cl.RemoveHosts(ids)
 	t.Assert(err, c.IsNil)
 }
 
