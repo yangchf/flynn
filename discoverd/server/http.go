@@ -126,6 +126,7 @@ func (h *httpAPI) AddInstance(w http.ResponseWriter, r *http.Request, params htt
 		return
 	}
 	fmt.Printf("discoverd server: %s AddInstance %s %v\n", time.Now(), params.ByName("service"), inst)
+	defer fmt.Printf("discoverd server: %s AddInstance complete %s %v\n", time.Now(), params.ByName("service"), inst)
 	if err := h.Store.AddInstance(params.ByName("service"), inst); err != nil {
 		if IsNotFound(err) {
 			jsonError(w, hh.ObjectNotFoundError, err)

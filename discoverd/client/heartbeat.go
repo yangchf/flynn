@@ -102,6 +102,7 @@ func (h *heartbeater) run(firstErr chan<- error) {
 		h.Lock()
 		defer h.Unlock()
 		fmt.Printf("heartbeater: %s %s %v\n", time.Now(), path, h.inst)
+		defer fmt.Printf("heartbeater: %s complete %s %v\n", time.Now(), path, h.inst)
 		return h.c.c.Put(path, h.inst, nil)
 	}
 
