@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/flynn/flynn/discoverd/client"
 	"github.com/flynn/flynn/host/types"
 	"github.com/flynn/flynn/pkg/cluster"
 	tc "github.com/flynn/flynn/test/cluster"
@@ -53,17 +52,7 @@ func (c *Client) AddHosts(testCluster *tc.Cluster, cluster *cluster.Client, coun
 	return hosts, nil
 }
 
-func (c *Client) RemoveHosts(dcl *discoverd.Client, ids []string) error {
-	// Wait for router-api services to disappear to indicate host
-	// removal (rather than using StreamHostEvents), so that other
-	// tests won't try and connect to this host via service discovery.
-	events := make(chan *discoverd.Event)
-	stream, err := dcl.Service("router-api").Watch(events)
-	if err != nil {
-		return err
-	}
-	defer stream.Close()
-
+func (c *Client) RemoveHosts(ids []string) error {
 	for _, id := range ids {
 		req, err := http.NewRequest("DELETE", c.ClusterAPI+"?host="+id, nil)
 		if err != nil {
@@ -76,18 +65,6 @@ func (c *Client) RemoveHosts(dcl *discoverd.Client, ids []string) error {
 		res.Body.Close()
 		if res.StatusCode != http.StatusOK {
 			return fmt.Errorf("expected 200 status, got %s", res.Status)
-		}
-
-	loop:
-		for {
-			select {
-			case event := <-events:
-				if event.Kind == discoverd.EventKindDown {
-					break loop
-				}
-			case <-time.After(20 * time.Second):
-				return fmt.Errorf("timed out waiting for host removal")
-			}
 		}
 	}
 	return nil
