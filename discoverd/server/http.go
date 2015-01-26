@@ -3,8 +3,10 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/flynn/flynn/Godeps/_workspace/src/github.com/julienschmidt/httprouter"
 	"github.com/flynn/flynn/discoverd/client"
@@ -123,6 +125,7 @@ func (h *httpAPI) AddInstance(w http.ResponseWriter, r *http.Request, params htt
 		jsonError(w, hh.ValidationError, err)
 		return
 	}
+	fmt.Printf("discoverd server: %s AddInstance %s %v\n", time.Now(), params.ByName("service"), inst)
 	if err := h.Store.AddInstance(params.ByName("service"), inst); err != nil {
 		if IsNotFound(err) {
 			jsonError(w, hh.ObjectNotFoundError, err)

@@ -101,6 +101,7 @@ func (h *heartbeater) run(firstErr chan<- error) {
 	register := func() error {
 		h.Lock()
 		defer h.Unlock()
+		fmt.Printf("heartbeater: %s %s %v\n", time.Now(), path, h.inst)
 		return h.c.c.Put(path, h.inst, nil)
 	}
 
