@@ -268,6 +268,7 @@ func (s *CLISuite) TestRun(t *c.C) {
 }
 
 func (s *CLISuite) TestRunSignal(t *c.C) {
+	t.Skip("pending")
 	app := s.newCliTestApp(t)
 	wait := func(cmd *exec.Cmd) error {
 		done := make(chan error)

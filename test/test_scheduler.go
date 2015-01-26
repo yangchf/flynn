@@ -224,6 +224,7 @@ func (s *SchedulerSuite) TestScale(t *c.C) {
 }
 
 func (s *SchedulerSuite) TestControllerRestart(t *c.C) {
+	t.Skip("pending")
 	// get the current controller details
 	app, err := s.controllerClient(t).GetApp("controller")
 	t.Assert(err, c.IsNil)
