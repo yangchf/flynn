@@ -19,8 +19,8 @@ func main() {
 	seed := flag.Int64("seed", time.Now().UnixNano(), "random number seed")
 	peers := flag.String("peers", "127.0.0.1", "peer IPs")
 	ports := flag.Int("ports", 5, "# of ports to listen on")
-	clients := flag.Int("clients", 10, "# of clients to start")
-	duration := flag.Duration("duration", 30*time.Second, "duration to run for")
+	clients := flag.Int("clients", 20, "# of clients to start")
+	duration := flag.Duration("duration", 5*time.Minute, "duration to run for")
 	runServer := flag.Bool("server", true, "run server as well as clients")
 	flag.Parse()
 	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
@@ -64,7 +64,7 @@ func main() {
 }
 
 const (
-	maxData  = 10000000
+	maxData  = 100000000
 	maxChunk = 1024
 	deadline = 1 * time.Second
 )
