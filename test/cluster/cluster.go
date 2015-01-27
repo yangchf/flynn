@@ -122,13 +122,6 @@ func (c *Cluster) BuildFlynn(rootFS, commit string, merge bool, runTests bool) (
 		return build.Drive("hda").FS, fmt.Errorf("error running build script: %s", err)
 	}
 
-	if runTests {
-		if err := runUnitTests(build, c.out); err != nil {
-			build.Kill()
-			return build.Drive("hda").FS, fmt.Errorf("unit tests failed: %s", err)
-		}
-	}
-
 	if err := build.Shutdown(); err != nil {
 		return build.Drive("hda").FS, fmt.Errorf("error while stopping build instance: %s", err)
 	}
@@ -150,14 +143,6 @@ func (c *Cluster) Boot(rootFS string, count int, dumpLogs io.Writer) error {
 		return err
 	}
 
-	c.log("Bootstrapping layer 1...")
-	if err := c.bootstrapLayer1(); err != nil {
-		if dumpLogs != nil {
-			c.DumpLogs(dumpLogs)
-		}
-		c.Shutdown()
-		return err
-	}
 	c.rootFS = rootFS
 	return nil
 }
@@ -237,7 +222,7 @@ func (c *Cluster) startVMs(rootFS string, initial bool, count int) ([]*Instance,
 		if !inst.initial {
 			continue
 		}
-		peers = append(peers, fmt.Sprintf("%s=http://%s:2380", inst.ID, inst.IP))
+		peers = append(peers, inst.IP)
 	}
 	for _, inst := range instances {
 		var script bytes.Buffer
@@ -339,17 +324,7 @@ git config user.name "CI"
 git merge origin/master
 {{ end }}
 
-docker pull scratch
-
-make
-
-if [[ -f test/scripts/debug-info.sh ]]; then
-  sudo cp test/scripts/debug-info.sh /usr/local/bin/debug-info.sh
-fi
-
-sudo cp host/bin/flynn-* /usr/bin
-sudo cp host/bin/manifest.json /etc/flynn-host.json
-sudo cp bootstrap/bin/manifest.json /etc/flynn-bootstrap.json
+sudo go build -o /usr/bin/netspam ./test/netspam
 `[1:]))
 
 type buildData struct {
@@ -401,17 +376,7 @@ sudo start-stop-daemon \
   --pidfile /var/run/flynn-host.pid \
   --exec /usr/bin/env \
   -- \
-  ETCD_NAME={{ .ID }} \
-  ETCD_INITIAL_CLUSTER={{ .Peers }} \
-  ETCD_INITIAL_CLUSTER_STATE=new \
-  {{ if .EtcdProxy }} ETCD_PROXY=on {{ end }} \
-  flynn-host \
-  daemon \
-  --id {{ .ID }} \
-  --manifest /etc/flynn-host.json \
-  --external {{ .IP }} \
-  --force \
-  --backend libvirt-lxc \
+  netspam -peers={{ .Peers }}
   &>/tmp/flynn-host.log
 `[1:])),
 }
@@ -524,33 +489,8 @@ func (c *Cluster) dumpLogs(w io.Writer) {
 		fmt.Fprintln(w)
 		return err
 	}
-	fallback := func() {
-		fmt.Fprintf(w, "\n*** Error getting job logs via flynn-host, falling back to tail log dump\n\n")
-		for _, inst := range c.Instances {
-			run(inst, "sudo bash -c 'tail -n +1 /tmp/flynn-host-logs/**/*.log'")
-		}
-	}
-
 	fmt.Fprint(w, "\n\n***** ***** ***** DUMPING ALL LOGS ***** ***** *****\n\n")
 	for _, inst := range c.Instances {
-		run(inst, "ps faux")
 		run(inst, "cat /tmp/flynn-host.log")
-		run(inst, "cat /tmp/debug-info.log")
-	}
-
-	var out bytes.Buffer
-	if err := c.Run("flynn-host ps -a -q", &Streams{Stdout: &out, Stderr: w}); err != nil {
-		io.Copy(w, &out)
-		fallback()
-		return
-	}
-
-	ids := strings.Split(strings.TrimSpace(out.String()), "\n")
-	for _, id := range ids {
-		if err := run(c.Instances[0], fmt.Sprintf("flynn-host inspect %s", id)); err != nil {
-			fallback()
-			return
-		}
-		run(c.Instances[0], fmt.Sprintf("flynn-host log %s", id))
 	}
 }

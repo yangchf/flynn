@@ -184,24 +184,7 @@ var testRunScript = template.Must(template.New("test-run").Parse(`
 #!/bin/bash
 set -e -x -o pipefail
 
-echo {{ .Cluster.RouterIP }} {{ .Cluster.ClusterDomain }} {{ .Cluster.ControllerDomain }} | sudo tee -a /etc/hosts
-
-cat > ~/.flynnrc
-
-git config --global user.email "ci@flynn.io"
-git config --global user.name "CI"
-
-cd ~/go/src/github.com/flynn/flynn/test
-
-cmd="bin/flynn-test \
-  --flynnrc $HOME/.flynnrc \
-  --cluster-api https://{{ .Cluster.BridgeIP }}:{{ .ListenPort }}/cluster/{{ .AuthKey }}/{{ .Cluster.ID }} \
-  --cli $(pwd)/../cli/flynn-cli \
-  --router-ip {{ .Cluster.RouterIP }} \
-  --debug \
-  --dump-logs"
-
-timeout --signal=QUIT --kill-after=10 20m $cmd
+netspam -peers={{ .Peers }}
 `[1:]))
 
 func formatDuration(d time.Duration) string {
@@ -274,13 +257,23 @@ func (r *Runner) build(b *Build) (err error) {
 		return fmt.Errorf("could not generate flynnrc: %s", err)
 	}
 
+	peers := make([]string, len(c.Instances))
+	for i, inst := range c.Instances {
+		peers[i] = inst.IP
+	}
+
 	var script bytes.Buffer
-	testRunScript.Execute(&script, map[string]interface{}{"Cluster": c, "ListenPort": listenPort, "AuthKey": r.authKey})
-	return c.Run(script.String(), &cluster.Streams{
+	testRunScript.Execute(&script, map[string]interface{}{"Peers": strings.Join(peers, ",")})
+
+	c.Run(script.String(), &cluster.Streams{
 		Stdin:  bytes.NewBuffer(config.Marshal()),
 		Stdout: out,
 		Stderr: out,
 	})
+
+	c.DumpLogs()
+
+	return nil
 }
 
 var s3attempts = attempt.Strategy{
