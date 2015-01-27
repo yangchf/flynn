@@ -203,6 +203,17 @@ func (i *Instance) Wait(timeout time.Duration) error {
 	}
 }
 
+func (i *Instance) Reboot() error {
+	if err := i.Run("sudo reboot", nil); err != nil {
+		return i.Kill()
+	}
+	i.sshMtx.Lock()
+	defer i.sshMtx.Unlock()
+	i.ssh.Close()
+	i.ssh = nil
+	return i.dialSSHLocked(ioutil.Discard)
+}
+
 func (i *Instance) Shutdown() error {
 	if err := i.Run("sudo poweroff", nil); err != nil {
 		return i.Kill()
@@ -226,19 +237,16 @@ func (i *Instance) Kill() error {
 }
 
 func (i *Instance) dialSSH(stderr io.Writer) error {
-	if i.ssh != nil {
-		return nil
-	}
-
-	i.sshMtx.RUnlock()
 	i.sshMtx.Lock()
-	defer i.sshMtx.RLock()
 	defer i.sshMtx.Unlock()
 
 	if i.ssh != nil {
 		return nil
 	}
+	return i.dialSSHLocked(stderr)
+}
 
+func (i *Instance) dialSSHLocked(stderr io.Writer) error {
 	var sc *ssh.Client
 	err := sshAttempts.Run(func() (err error) {
 		if stderr != nil {
