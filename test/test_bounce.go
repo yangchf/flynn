@@ -36,10 +36,22 @@ func (s *BounceSuite) TestHostUpDown(t *c.C) {
 	t.Assert(err, c.IsNil)
 }
 
-func (s *BounceSuite) TestBounceHostProcess(t *c.C) {
-	// TODO
-}
-
 func (s *BounceSuite) TestBounceHostVM(t *c.C) {
-	// TODO
+	cl := &testcluster.Client{
+		C:          httpClient,
+		ClusterAPI: args.ClusterAPI,
+	}
+
+	// add a new host
+	hosts, err := cl.AddHosts(testCluster, s.clusterClient(t), 1)
+	t.Assert(err, c.IsNil)
+	t.Assert(hosts, c.HasLen, 1)
+
+	// bounce that host
+	err = cl.BounceHost(hosts[0])
+	t.Assert(err, c.IsNil)
+
+	// destroy that host to clean up
+	err = cl.RemoveHosts(hosts)
+	t.Assert(err, c.IsNil)
 }

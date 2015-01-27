@@ -69,3 +69,19 @@ func (c *Client) RemoveHosts(ids []string) error {
 	}
 	return nil
 }
+
+func (c *Client) BounceHost(id string) error {
+	req, err := http.NewRequest("HEAD", c.ClusterAPI+"?host="+id, nil)
+	if err != nil {
+		return fmt.Errorf("error in 'bounce' request to cluster api: %s", err)
+	}
+	res, err := c.C.Do(req)
+	if err != nil {
+		return fmt.Errorf("error in 'bounce' request to cluster api: %s", err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("expected 200 status in 'bounce' request to cluster api, got %s", res.Status)
+	}
+	return nil
+}

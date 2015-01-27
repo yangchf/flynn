@@ -629,6 +629,13 @@ func (r *Runner) httpClusterHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		w.Write([]byte("ok"))
+	case "HEAD":
+		hostID := req.FormValue("host")
+		if err := c.BounceHost(hostID); err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		w.Write([]byte("ok"))
 	default:
 		http.Error(w, "unknown method", 405)
 	}
