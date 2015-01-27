@@ -68,6 +68,7 @@ Commands:
   log                        Get the logs of a job
   ps                         List jobs
   stop                       Stop running jobs
+  update                     Update the host
   upload-debug-info          Upload debug information to an anonymous gist
 
 See 'flynn-host help <command>' for more information on a specific command.
