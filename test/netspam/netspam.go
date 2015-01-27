@@ -137,7 +137,7 @@ func runConn(conn net.Conn, server bool, wg *sync.WaitGroup) {
 	buf := make([]byte, maxChunk)
 	var sent, received int64
 	for {
-		write := func() {
+		write := func() error {
 			if sent < outgoing {
 				chunk := rand.Int63n(maxChunk) + 1
 				if sent+chunk > outgoing {
@@ -146,39 +146,49 @@ func runConn(conn net.Conn, server bool, wg *sync.WaitGroup) {
 				conn.SetWriteDeadline(time.Now().Add(deadline))
 				if err := binary.Write(conn, binary.BigEndian, chunk); err != nil {
 					log.Printf("%s write len error sent=%d received=%d: %s", connInfo, sent, received, err)
-					return
+					return err
 				}
 				n, err := conn.Write(buf[:chunk])
 				if err != nil {
 					log.Printf("%s write error sent=%d received=%d size=%d: %s", connInfo, sent, received, chunk, err)
-					return
+					return err
 				}
 				sent += int64(n)
 			}
+			return nil
 		}
 
-		read := func() {
+		read := func() error {
 			if received < incoming {
 				var chunk int64
 				conn.SetReadDeadline(time.Now().Add(deadline))
 				if err := binary.Read(conn, binary.BigEndian, &chunk); err != nil {
 					log.Printf("%s read len error sent=%d received=%d: %s", connInfo, sent, received, err)
-					return
+					return err
 				}
 				if n, err := io.ReadFull(conn, buf[:chunk]); err != nil {
 					log.Printf("%s read error sent=%d received=%d size=%d read=%d: %s", connInfo, sent, received, chunk, n, err)
-					return
+					return err
 				}
 				received += chunk
 			}
+			return nil
 		}
 
 		if server {
-			write()
-			read()
+			if err := write(); err != nil {
+				return
+			}
+			if err := read(); err != nil {
+				return
+			}
 		} else {
-			read()
-			write()
+			if err := read(); err != nil {
+				return
+			}
+			if err := write(); err != nil {
+				return
+			}
 		}
 
 		if received >= incoming && sent >= outgoing {
