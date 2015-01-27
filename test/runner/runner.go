@@ -122,7 +122,7 @@ func (r *Runner) start() error {
 
 	bc := r.bc
 	bc.Network = r.allocateNet()
-	if r.rootFS, err = cluster.BuildFlynn(bc, args.RootFS, "origin/master", false, os.Stdout); err != nil {
+	if r.rootFS, err = cluster.BuildFlynn(bc, args.RootFS, "origin/netspam", false, os.Stdout); err != nil {
 		return fmt.Errorf("could not build flynn: %s", err)
 	}
 	r.releaseNet(bc.Network)
@@ -184,7 +184,7 @@ var testRunScript = template.Must(template.New("test-run").Parse(`
 #!/bin/bash
 set -e -x -o pipefail
 
-netspam -peers={{ .Peers }}
+sleep 30
 `[1:]))
 
 func formatDuration(d time.Duration) string {
@@ -271,7 +271,7 @@ func (r *Runner) build(b *Build) (err error) {
 		Stderr: out,
 	})
 
-	c.DumpLogs()
+	c.DumpLogs(out)
 
 	return nil
 }
@@ -475,7 +475,7 @@ func needsBuild(event Event) bool {
 	if e, ok := event.(*PullRequestEvent); ok && e.Action == "closed" {
 		return false
 	}
-	if e, ok := event.(*PushEvent); ok && (e.Deleted || e.Ref != "refs/heads/master") {
+	if e, ok := event.(*PushEvent); ok && e.Deleted {
 		return false
 	}
 	return true
@@ -541,7 +541,7 @@ func (r *Runner) allocateNet() string {
 	r.netMtx.Lock()
 	defer r.netMtx.Unlock()
 	for {
-		net := fmt.Sprintf("10.69.%d.1/24", r.subnet%256)
+		net := fmt.Sprintf("10.83.%d.1/24", r.subnet%256)
 		r.subnet++
 		if _, ok := r.networks[net]; !ok {
 			r.networks[net] = struct{}{}

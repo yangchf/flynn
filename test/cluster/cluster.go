@@ -248,7 +248,7 @@ func (c *Cluster) setup() error {
 	}
 	if c.bridge == nil {
 		var err error
-		name := "flynnbr." + random.String(5)
+		name := "spambr." + random.String(5)
 		c.logf("creating network bridge %s\n", name)
 		c.bridge, err = createBridge(name, c.bc.Network, c.bc.NatIface)
 		if err != nil {
@@ -324,7 +324,7 @@ git config user.name "CI"
 git merge origin/master
 {{ end }}
 
-sudo go build -o /usr/bin/netspam ./test/netspam
+sudo GOPATH=${GOPATH} go build -o /usr/bin/netspam ./test/netspam
 `[1:]))
 
 type buildData struct {
@@ -376,8 +376,7 @@ sudo start-stop-daemon \
   --pidfile /var/run/flynn-host.pid \
   --exec /usr/bin/env \
   -- \
-  netspam -peers={{ .Peers }}
-  &>/tmp/flynn-host.log
+  netspam -peers={{ .Peers }} >/tmp/flynn-host.log 2>&1
 `[1:])),
 }
 
