@@ -184,7 +184,7 @@ var testRunScript = template.Must(template.New("test-run").Parse(`
 #!/bin/bash
 set -e -x -o pipefail
 
-sleep 300
+sleep 600
 `[1:]))
 
 func formatDuration(d time.Duration) string {
