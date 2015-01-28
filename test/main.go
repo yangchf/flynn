@@ -131,7 +131,7 @@ func main() {
 		Stream:           args.Stream,
 		Verbose:          args.Debug,
 		KeepWorkDir:      args.Debug,
-		ConcurrencyLevel: 5,
+		ConcurrencyLevel: 1,
 	})
 	fmt.Println(res)
 }

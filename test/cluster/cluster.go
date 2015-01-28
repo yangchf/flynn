@@ -533,6 +533,7 @@ func (c *Cluster) dumpLogs(w io.Writer) {
 
 	fmt.Fprint(w, "\n\n***** ***** ***** DUMPING ALL LOGS ***** ***** *****\n\n")
 	for _, inst := range c.Instances {
+		run(inst, "dmesg")
 		run(inst, "ps faux")
 		run(inst, "cat /tmp/flynn-host.log")
 		run(inst, "cat /tmp/debug-info.log")
