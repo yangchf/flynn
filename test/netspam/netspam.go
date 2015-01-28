@@ -19,7 +19,7 @@ func main() {
 	seed := flag.Int64("seed", time.Now().UnixNano(), "random number seed")
 	peers := flag.String("peers", "127.0.0.1", "peer IPs")
 	ports := flag.Int("ports", 5, "# of ports to listen on")
-	clients := flag.Int("clients", 20, "# of clients to start")
+	clients := flag.Int("clients", 50, "# of clients to start")
 	duration := flag.Duration("duration", 10*time.Minute, "duration to run for")
 	runServer := flag.Bool("server", true, "run server as well as clients")
 	flag.Parse()
