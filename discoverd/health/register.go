@@ -1,10 +1,11 @@
 package health
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/flynn/flynn/discoverd2/client"
+	"github.com/flynn/flynn/discoverd/client"
 	"github.com/flynn/flynn/pkg/stream"
 )
 
@@ -47,6 +48,7 @@ func (h *heartbeater) run(events chan MonitorEvent) {
 
 		switch e.Status {
 		case MonitorStatusUp:
+			fmt.Println("register is called!!!")
 			go h.register(stopRegister)
 		case MonitorStatusDown:
 			h.Lock()
@@ -59,6 +61,9 @@ func (h *heartbeater) run(events chan MonitorEvent) {
 		if h.Events != nil {
 			h.Events <- e
 		}
+	}
+	if stopRegister != nil {
+		close(stopRegister)
 	}
 }
 
@@ -85,6 +90,15 @@ func (h *heartbeater) register(stop chan struct{}) {
 		}
 		time.Sleep(registerErrWait)
 	}
+}
+
+func (h *heartbeater) Addr() string {
+	h.Lock()
+	defer h.Unlock()
+	if h.hb != nil {
+		return h.hb.Addr()
+	}
+	return ""
 }
 
 func (h *heartbeater) SetMeta(meta map[string]string) error {
