@@ -4,6 +4,7 @@ package cluster
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -99,6 +100,7 @@ func (c *Client) followLeader(firstErr chan<- error) {
 		c.mtx.Lock()
 		c.leaderID = leader.Meta["id"]
 		c.c.URL = "http://" + leader.Addr
+		log.Printf("[cluster client]: followLeader - %s - %s\n", c.leaderID, c.c.URL)
 		// TODO: cancel any current requests
 		if c.err == nil {
 			close(c.leaderChange)
