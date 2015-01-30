@@ -536,6 +536,11 @@ func (c *Cluster) dumpLogs(w io.Writer) {
 		run(inst, "ps faux")
 		run(inst, "cat /tmp/flynn-host.log")
 		run(inst, "cat /tmp/debug-info.log")
+		run(inst, "curl localhost:1111/services/flynn-host/instances")
+		run(inst, "curl localhost:1111/services/flynn-host/leader")
+		run(inst, "curl localhost:2379/v2/keys/discoverd/services?recursive=true")
+		run(inst, "curl localhost:2379/v2/stats/self")
+		run(inst, "curl localhost:2379/v2/members")
 	}
 
 	var out bytes.Buffer
