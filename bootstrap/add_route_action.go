@@ -25,10 +25,12 @@ type AddRouteState struct {
 }
 
 func (a *AddRouteAction) Run(s *State) error {
+	s.debugf("AddRouteAction controllerClient")
 	client, err := s.ControllerClient()
 	if err != nil {
 		return err
 	}
+	s.debugf("AddRouteAction getAppStep")
 	data, err := getAppStep(s, a.AppStep)
 	if err != nil {
 		return err
@@ -37,10 +39,12 @@ func (a *AddRouteAction) Run(s *State) error {
 		if a.Route.Type != "http" {
 			return fmt.Errorf("bootstrap: invalid cert_step option for non-http route")
 		}
+		s.debugf("AddRouteAction getCertStep")
 		cert, err := getCertStep(s, a.CertStep)
 		if err != nil {
 			return err
 		}
+		s.debugf("AddRouteAction HTTPRoute")
 		route := a.Route.HTTPRoute()
 		route.Domain = interpolate(s, route.Domain)
 		route.TLSCert = cert.Cert
@@ -48,7 +52,9 @@ func (a *AddRouteAction) Run(s *State) error {
 		a.Route = route.ToRoute()
 	}
 
+	s.debugf("AddRouteAction CreateRoute")
 	if err := client.CreateRoute(data.App.ID, a.Route); err != nil {
+		s.debugf("AddRouteAction CreateRoute err: %s", err)
 		return err
 	}
 	s.StepData[a.ID] = &AddRouteState{App: data.App, Route: a.Route}

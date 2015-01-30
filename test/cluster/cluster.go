@@ -500,6 +500,7 @@ type bootstrapMsg struct {
 	State string          `json:"state"`
 	Data  json.RawMessage `json:"data"`
 	Error string          `json:"error"`
+	Debug string          `json:"debug"`
 }
 
 type controllerCert struct {
@@ -535,6 +536,9 @@ func (c *Cluster) bootstrapLayer1() error {
 		c.log("bootstrap ===>", msg.Id, msg.State)
 		if msg.State == "error" {
 			c.log(msg.Error)
+		}
+		if msg.Debug != "" {
+			c.log(msg.Debug)
 		}
 		if msg.Id == "controller-cert" && msg.State == "done" {
 			json.Unmarshal(msg.Data, &cert)

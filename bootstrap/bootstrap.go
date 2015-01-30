@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -24,6 +25,12 @@ type State struct {
 	controllerc *controller.Client
 
 	controllerKey string
+
+	debug bytes.Buffer
+}
+
+func (s *State) debugf(format string, v ...interface{}) (int, error) {
+	return fmt.Fprintf(&s.debug, format+"\n", v...)
 }
 
 func (s *State) ClusterClient() (*cluster.Client, error) {
@@ -78,6 +85,7 @@ type StepInfo struct {
 	Error     string      `json:"error,omitempty"`
 	Err       error       `json:"-"`
 	Timestamp time.Time   `json:"ts"`
+	Debug     string      `json:"debug"`
 }
 
 var discoverdAttempts = attempt.Strategy{
@@ -132,11 +140,12 @@ func Run(manifest []byte, ch chan<- *StepInfo, minHosts int) (err error) {
 
 		ch <- &StepInfo{StepAction: a, State: "start", Timestamp: time.Now().UTC()}
 
+		state.debug = bytes.Buffer{}
 		if err := action.Run(state); err != nil {
 			return err
 		}
 
-		si := &StepInfo{StepAction: a, State: "done", Timestamp: time.Now().UTC()}
+		si := &StepInfo{StepAction: a, State: "done", Timestamp: time.Now().UTC(), Debug: state.debug.String()}
 		if data, ok := state.StepData[a.ID]; ok {
 			si.StepData = data
 		}
